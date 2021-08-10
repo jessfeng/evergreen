@@ -175,7 +175,7 @@ func ExportECSContainerResources(info pod.ContainerResourceInfo) cocoa.ECSContai
 func ExportPodContainerDef(opts pod.TaskContainerCreationOptions) (*cocoa.ECSContainerDefinition, error) {
 	return cocoa.NewECSContainerDefinition().
 		AddPortMappings(*cocoa.NewPortMapping().SetContainerPort(2285)).
-		SetName("evg-agent")
+		SetName("evg-agent").
 		SetImage(opts.Image).
 		SetMemoryMB(opts.MemoryMB).
 		SetCPU(opts.CPU).
