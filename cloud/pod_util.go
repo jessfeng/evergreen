@@ -174,6 +174,8 @@ func ExportECSContainerResources(info pod.ContainerResourceInfo) cocoa.ECSContai
 // ExportPodContainerDef exports the ECS pod container definition into the equivalent cocoa.ECSContainerDefintion.
 func ExportPodContainerDef(opts pod.TaskContainerCreationOptions) (*cocoa.ECSContainerDefinition, error) {
 	return cocoa.NewECSContainerDefinition().
+		AddPortMappings(*cocoa.NewPortMapping().SetContainerPort(2285)).
+		SetName("evg-agent")
 		SetImage(opts.Image).
 		SetMemoryMB(opts.MemoryMB).
 		SetCPU(opts.CPU).
@@ -208,6 +210,7 @@ func ExportPodCreationOptions(ecsConfig evergreen.ECSConfig, taskContainerCreati
 	}
 
 	return cocoa.NewECSPodCreationOptions().
+		SetNetworkMode(cocoa.NetworkModeAWSVPC).
 		SetTaskRole(ecsConfig.TaskRole).
 		SetExecutionRole(ecsConfig.ExecutionRole).
 		SetExecutionOptions(*execOpts).
