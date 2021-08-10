@@ -1,6 +1,8 @@
 package cloud
 
 import (
+	"strings"
+
 	"github.com/evergreen-ci/cocoa"
 	"github.com/evergreen-ci/cocoa/awsutil"
 	"github.com/evergreen-ci/cocoa/ecs"
@@ -172,14 +174,14 @@ func ExportECSContainerResources(info pod.ContainerResourceInfo) cocoa.ECSContai
 }
 
 // ExportPodContainerDef exports the ECS pod container definition into the equivalent cocoa.ECSContainerDefintion.
-func ExportPodContainerDef(opts pod.TaskContainerCreationOptions) (*cocoa.ECSContainerDefinition, error) {
+func ExportPodContainerDef(conf evergreen.SecretsManagerConfig, opts pod.TaskContainerCreationOptions) (*cocoa.ECSContainerDefinition, error) {
 	return cocoa.NewECSContainerDefinition().
 		AddPortMappings(*cocoa.NewPortMapping().SetContainerPort(2285)).
 		SetName("evg-agent").
 		SetImage(opts.Image).
 		SetMemoryMB(opts.MemoryMB).
 		SetCPU(opts.CPU).
-		SetEnvironmentVariables(exportEnvVars(opts.EnvVars, opts.EnvSecrets)), nil
+		SetEnvironmentVariables(exportEnvVars(conf, opts.EnvVars, opts.EnvSecrets)), nil
 }
 
 // ExportPodExecutionOptions exports the ECS configuration into cocoa.ECSPodExecutionOptions.
@@ -198,21 +200,22 @@ func ExportPodExecutionOptions(ecsConfig evergreen.ECSConfig, podOS pod.OS) (*co
 }
 
 // ExportPodCreationOptions exports the ECS pod resources into cocoa.ECSPodExecutionOptions.
-func ExportPodCreationOptions(ecsConfig evergreen.ECSConfig, taskContainerCreationOpts pod.TaskContainerCreationOptions) (*cocoa.ECSPodCreationOptions, error) {
-	execOpts, err := ExportPodExecutionOptions(ecsConfig, taskContainerCreationOpts.OS)
+func ExportPodCreationOptions(podConf evergreen.AWSPodConfig, p *pod.Pod) (*cocoa.ECSPodCreationOptions, error) {
+	execOpts, err := ExportPodExecutionOptions(podConf.ECS, p.TaskContainerCreationOpts.OS)
 	if err != nil {
 		return nil, errors.Wrap(err, "exporting pod execution options")
 	}
 
-	containerDef, err := ExportPodContainerDef(taskContainerCreationOpts)
+	containerDef, err := ExportPodContainerDef(podConf.SecretsManager, p.TaskContainerCreationOpts)
 	if err != nil {
 		return nil, errors.Wrap(err, "exporting pod container definition")
 	}
 
 	return cocoa.NewECSPodCreationOptions().
+		SetName(strings.Join([]string{podConf.ECS.TaskDefinitionPrefix, p.ID}, "-")).
 		SetNetworkMode(cocoa.NetworkModeAWSVPC).
-		SetTaskRole(ecsConfig.TaskRole).
-		SetExecutionRole(ecsConfig.ExecutionRole).
+		SetTaskRole(podConf.ECS.TaskRole).
+		SetExecutionRole(podConf.ECS.ExecutionRole).
 		SetExecutionOptions(*execOpts).
 		AddContainerDefinitions(*containerDef), nil
 }
@@ -231,16 +234,16 @@ func podAWSOptions(settings *evergreen.Settings) awsutil.ClientOptions {
 }
 
 // exportEnvVars converts a map of environment variables and a map of secrets to a slice of cocoa.EnvironmentVariables.
-func exportEnvVars(envVars map[string]string, secrets map[string]string) []cocoa.EnvironmentVariable {
+func exportEnvVars(conf evergreen.SecretsManagerConfig, envVars map[string]string, secrets map[string]string) []cocoa.EnvironmentVariable {
 	var allEnvVars []cocoa.EnvironmentVariable
 
 	for k, v := range envVars {
 		allEnvVars = append(allEnvVars, *cocoa.NewEnvironmentVariable().SetName(k).SetValue(v))
 	}
 
-	// kim: Add POD_ID and POD_SECRET
 	for k, v := range secrets {
-		allEnvVars = append(allEnvVars, *cocoa.NewEnvironmentVariable().SetName(k).SetSecretOptions(
+		name := strings.Join([]string{conf.SecretPrefix, k}, "/")
+		allEnvVars = append(allEnvVars, *cocoa.NewEnvironmentVariable().SetName(name).SetSecretOptions(
 			*cocoa.NewSecretOptions().
 				SetName(k).
 				SetValue(v).
