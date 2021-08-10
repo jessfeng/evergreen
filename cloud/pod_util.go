@@ -242,10 +242,10 @@ func exportEnvVars(conf evergreen.SecretsManagerConfig, envVars map[string]strin
 	}
 
 	for k, v := range secrets {
-		name := strings.Join([]string{conf.SecretPrefix, k}, "/")
-		allEnvVars = append(allEnvVars, *cocoa.NewEnvironmentVariable().SetName(name).SetSecretOptions(
+		secretName := strings.Join([]string{conf.SecretPrefix, k}, "/")
+		allEnvVars = append(allEnvVars, *cocoa.NewEnvironmentVariable().SetName(k).SetSecretOptions(
 			*cocoa.NewSecretOptions().
-				SetName(k).
+				SetName(secretName).
 				SetValue(v).
 				SetExists(false).
 				SetOwned(true)))
