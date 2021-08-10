@@ -238,6 +238,7 @@ func exportEnvVars(envVars map[string]string, secrets map[string]string) []cocoa
 		allEnvVars = append(allEnvVars, *cocoa.NewEnvironmentVariable().SetName(k).SetValue(v))
 	}
 
+	// kim: Add POD_ID and POD_SECRET
 	for k, v := range secrets {
 		allEnvVars = append(allEnvVars, *cocoa.NewEnvironmentVariable().SetName(k).SetSecretOptions(
 			*cocoa.NewSecretOptions().

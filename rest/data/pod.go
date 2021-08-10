@@ -7,6 +7,7 @@ import (
 	"github.com/evergreen-ci/evergreen/model/pod"
 	"github.com/evergreen-ci/evergreen/rest/model"
 	"github.com/evergreen-ci/gimlet"
+	"github.com/evergreen-ci/utility"
 	"github.com/pkg/errors"
 )
 
@@ -130,6 +131,20 @@ func translatePod(p model.APICreatePod) (*pod.Pod, error) {
 			Message:    fmt.Sprintf("Unexpected type %T for pod.Pod", i),
 		}
 	}
+
+	// kim: NOTE: not the most elegant for setting the agent settings, but it
+	// works.
+	if podDB.Secret == "" {
+		podDB.Secret = utility.RandomString()
+	}
+	if podDB.TaskContainerCreationOpts.EnvSecrets == nil {
+		podDB.TaskContainerCreationOpts.EnvSecrets = map[string]string{}
+	}
+	podDB.TaskContainerCreationOpts.EnvSecrets["POD_SECRET"] = podDB.Secret
+	if podDB.TaskContainerCreationOpts.EnvVars == nil {
+		podDB.TaskContainerCreationOpts.EnvVars = map[string]string{}
+	}
+	podDB.TaskContainerCreationOpts.EnvVars["POD_ID"] = podDB.ID
 
 	return &podDB, nil
 }

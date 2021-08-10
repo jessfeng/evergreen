@@ -6,6 +6,7 @@ import (
 	"github.com/evergreen-ci/evergreen/model/pod"
 	"github.com/evergreen-ci/utility"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // APIPodEnvVar is the model for environment variables in a container.
@@ -24,7 +25,6 @@ type APITimeInfo struct {
 
 // APICreatePod is the model to create a new pod.
 type APICreatePod struct {
-	Name       *string         `json:"name"`
 	Memory     *int            `json:"memory"`
 	CPU        *int            `json:"cpu"`
 	Image      *string         `json:"image"`
@@ -52,7 +52,7 @@ func (p *APICreatePod) ToService() (interface{}, error) {
 	}
 
 	return pod.Pod{
-		ID:     utility.RandomString(),
+		ID:     primitive.NewObjectID().Hex(),
 		Secret: utility.FromStringPtr(p.Secret),
 		Status: pod.StatusInitializing,
 		TimeInfo: pod.TimeInfo{
