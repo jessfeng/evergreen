@@ -174,14 +174,20 @@ func ExportECSContainerResources(info pod.ContainerResourceInfo) cocoa.ECSContai
 }
 
 // ExportPodContainerDef exports the ECS pod container definition into the equivalent cocoa.ECSContainerDefintion.
-func ExportPodContainerDef(conf evergreen.SecretsManagerConfig, opts pod.TaskContainerCreationOptions) (*cocoa.ECSContainerDefinition, error) {
+func ExportPodContainerDef(settings *evergreen.Settings, p *pod.Pod) (*cocoa.ECSContainerDefinition, error) {
+	opts := p.TaskContainerCreationOpts
+	script, err := p.AgentScript(settings)
+	if err != nil {
+		return nil, errors.Wrap(err, "building agent script")
+	}
 	return cocoa.NewECSContainerDefinition().
 		AddPortMappings(*cocoa.NewPortMapping().SetContainerPort(2285)).
 		SetName("evg-agent").
 		SetImage(opts.Image).
 		SetMemoryMB(opts.MemoryMB).
 		SetCPU(opts.CPU).
-		SetEnvironmentVariables(exportEnvVars(conf, opts.EnvVars, opts.EnvSecrets)), nil
+		SetCommand(script).
+		SetEnvironmentVariables(exportEnvVars(settings.Providers.AWS.Pod.SecretsManager, opts.EnvVars, opts.EnvSecrets)), nil
 }
 
 // ExportPodExecutionOptions exports the ECS configuration into cocoa.ECSPodExecutionOptions.
@@ -200,13 +206,14 @@ func ExportPodExecutionOptions(ecsConfig evergreen.ECSConfig, podOS pod.OS) (*co
 }
 
 // ExportPodCreationOptions exports the ECS pod resources into cocoa.ECSPodExecutionOptions.
-func ExportPodCreationOptions(podConf evergreen.AWSPodConfig, p *pod.Pod) (*cocoa.ECSPodCreationOptions, error) {
+func ExportPodCreationOptions(settings *evergreen.Settings, p *pod.Pod) (*cocoa.ECSPodCreationOptions, error) {
+	podConf := settings.Providers.AWS.Pod
 	execOpts, err := ExportPodExecutionOptions(podConf.ECS, p.TaskContainerCreationOpts.OS)
 	if err != nil {
 		return nil, errors.Wrap(err, "exporting pod execution options")
 	}
 
-	containerDef, err := ExportPodContainerDef(podConf.SecretsManager, p.TaskContainerCreationOpts)
+	containerDef, err := ExportPodContainerDef(settings, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "exporting pod container definition")
 	}

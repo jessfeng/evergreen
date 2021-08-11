@@ -90,7 +90,7 @@ func (j *createPodJob) Run(ctx context.Context) {
 
 	switch j.pod.Status {
 	case pod.StatusInitializing:
-		opts, err := cloud.ExportPodCreationOptions(j.env.Settings().Providers.AWS.Pod, j.pod)
+		opts, err := cloud.ExportPodCreationOptions(j.env.Settings(), j.pod)
 		if err != nil {
 			j.AddError(errors.Wrap(err, "exporting pod creation options"))
 		}
