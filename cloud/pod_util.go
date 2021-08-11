@@ -187,7 +187,8 @@ func ExportPodContainerDef(settings *evergreen.Settings, p *pod.Pod) (*cocoa.ECS
 		SetMemoryMB(opts.MemoryMB).
 		SetCPU(opts.CPU).
 		SetCommand(script).
-		SetEnvironmentVariables(exportEnvVars(settings.Providers.AWS.Pod.SecretsManager, opts.EnvVars, opts.EnvSecrets)), nil
+		SetEnvironmentVariables(exportEnvVars(settings.Providers.AWS.Pod.SecretsManager, opts.EnvVars, opts.EnvSecrets)).
+		SetWorkingDir(p.TaskContainerCreationOpts.WorkingDir), nil
 }
 
 // ExportPodExecutionOptions exports the ECS configuration into cocoa.ECSPodExecutionOptions.
